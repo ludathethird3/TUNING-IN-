@@ -48,7 +48,7 @@ function setup() {
   video.setAttribute("playsinline", "");
   video.setAttribute("preload", "metadata");
 
-  video.muted = true;
+  video.muted = false;
   video.loop = true;
 
   video.addEventListener("waiting", function() {
@@ -225,6 +225,16 @@ function draw() {
 function changeChannel() {
   if (!started) {
     started = true;
+
+    // Request fullscreen directly from the user's start tap.
+    if (
+      !document.fullscreenElement &&
+      document.documentElement.requestFullscreen
+    ) {
+      document.documentElement.requestFullscreen().catch(function(error) {
+        console.log("Fullscreen unavailable:", error.message);
+      });
+    }
   } else {
     channel = (channel + 1) % channels.length;
   }
