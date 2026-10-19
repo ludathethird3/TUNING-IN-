@@ -1,5 +1,5 @@
 // Keep true until all final MP4 files have been uploaded.
-const USE_PLACEHOLDERS = true;
+const USE_PLACEHOLDERS = false;
 
 // Full-screen flash opacity: 0–255.
 const FLASH_OPACITY = 35;
