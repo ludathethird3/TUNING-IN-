@@ -2,7 +2,7 @@
 const USE_PLACEHOLDERS = false;
 
 // Full-screen flash opacity: 0–255.
-const FLASH_OPACITY = 35;
+const FLASH_OPACITY = 135;
 
 const roles = ["left", "centre", "right"];
 
