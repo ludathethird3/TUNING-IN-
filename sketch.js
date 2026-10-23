@@ -1,5 +1,5 @@
 // Keep true until all final MP4 files have been uploaded.
-const USE_PLACEHOLDERS = false;
+const USE_PLACEHOLDERS = true;
 
 // Full-screen flash opacity: 0–255.
 const FLASH_OPACITY = 35;
@@ -30,6 +30,8 @@ const TAP_MOVE_LIMIT = 25;
 
 let pointerStart = null;
 let lastTap = null;
+const effectNames = ["normal", "invert", "black-and-white"];
+let effectIndex = 0;
 
 let player;
 let activeFile = "";
@@ -111,10 +113,17 @@ canvas.elt.addEventListener("pointerup", function(event) {
 
   pointerStart = null;
 
-  // Ignore swipes for now. We will add their effects next.
-  if (movement > TAP_MOVE_LIMIT) {
-    lastTap = null;
-    return;
+ // Swiping changes effects on distraction channels only.
+if (movement > TAP_MOVE_LIMIT) {
+  lastTap = null;
+
+  if (started && channels[channel].type === "distraction") {
+    effectIndex = (effectIndex + 1) % effectNames.length;
+    console.log("Effect:", effectNames[effectIndex]);
+  }
+
+  return;
+}
   }
 
   // Change role remains a single tap.
@@ -240,7 +249,16 @@ function draw() {
     !playbackError &&
     player.elt.readyState >= 2
   ) {
-    image(player, 0, 0, width, height);
+image(player, 0, 0, width, height);
+
+// Apply the effect before drawing labels and feedback.
+if (channels[channel].type === "distraction") {
+  if (effectIndex === 1) {
+    filter(INVERT);
+  } else if (effectIndex === 2) {
+    filter(GRAY);
+  }
+}
   } else {
     fill(255);
     textAlign(CENTER, CENTER);
@@ -318,6 +336,7 @@ function getChannelFile(entry) {
 }
 
 function playCurrentChannel() {
+    effectIndex = 0;
   let entry = channels[channel];
 
   startVisualFeedback(
