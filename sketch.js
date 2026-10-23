@@ -30,7 +30,7 @@ const TAP_MOVE_LIMIT = 25;
 
 let pointerStart = null;
 let lastTap = null;
-const effectNames = ["normal", "invert", "black-and-white"];
+const effectNames = ["normal", "invert", "posterize"];
 let effectIndex = 0;
 
 let player;
@@ -255,8 +255,9 @@ image(player, 0, 0, width, height);
 if (channels[channel].type === "distraction") {
   if (effectIndex === 1) {
     filter(INVERT);
-  } else if (effectIndex === 2) {
-    filter(GRAY);
+ } else if (effectIndex === 2) {
+  filter(POSTERIZE, 3);
+}
   }
 }
   } else {
