@@ -13,11 +13,11 @@ const placeholderFiles = {
 };
 
 const puzzlePatterns = [
-  [200],                     // Puzzle 1: one long pulse
-  [100, 100, 100],            // Puzzle 2: two short pulses
-  [100, 100, 100, 100, 100],  // Puzzle 3: three short pulses
-  [100, 100, 300],            // Puzzle 4: short, long
-  [300, 100, 100]             // Puzzle 5: long, short
+  [200],
+  [100, 100, 100],
+  [100, 100, 100, 100, 100],
+  [100, 100, 300],
+  [300, 100, 100]
 ];
 
 let channels = [];
@@ -30,8 +30,18 @@ const TAP_MOVE_LIMIT = 25;
 
 let pointerStart = null;
 let lastTap = null;
-const effectNames = ["normal", "invert", "posterize"];
+
+const effectNames = [
+  "normal",
+  "invert",
+  "posterize",
+  "threshold",
+  "pixelation",
+  "rgb-split"
+];
+
 let effectIndex = 0;
+let pixelBuffer;
 
 let player;
 let activeFile = "";
@@ -45,6 +55,10 @@ let feedbackStartedAt = 0;
 function setup() {
   let canvas = createCanvas(360, 640);
   canvas.elt.style.touchAction = "none";
+
+  // Small canvas used to create blocky pixelation.
+  pixelBuffer = createGraphics(36, 64);
+  pixelBuffer.pixelDensity(1);
 
   buildChannelList();
 
@@ -72,108 +86,120 @@ function setup() {
     if (!started) return;
 
     loading = false;
-    playbackError = "Could not load video. Tap to continue.";
+    playbackError = "Could not load video. Double-tap to continue.";
     console.error("VIDEO LOAD FAILED:", activeFile);
   });
 
-canvas.elt.addEventListener("pointerdown", function(event) {
-  if (!event.isPrimary || event.button !== 0) return;
+  canvas.elt.addEventListener("pointerdown", function(event) {
+    if (!event.isPrimary || event.button !== 0) return;
 
-  event.preventDefault();
+    event.preventDefault();
 
-  const bounds = canvas.elt.getBoundingClientRect();
+    const bounds = canvas.elt.getBoundingClientRect();
 
-  pointerStart = {
-    id: event.pointerId,
-    x: (event.clientX - bounds.left) * width / bounds.width,
-    y: (event.clientY - bounds.top) * height / bounds.height
-  };
+    pointerStart = {
+      id: event.pointerId,
+      x: (event.clientX - bounds.left) * width / bounds.width,
+      y: (event.clientY - bounds.top) * height / bounds.height
+    };
 
-  canvas.elt.setPointerCapture(event.pointerId);
-});
+    canvas.elt.setPointerCapture(event.pointerId);
+  });
 
-canvas.elt.addEventListener("pointercancel", function() {
-  pointerStart = null;
-  lastTap = null;
-});
-
-canvas.elt.addEventListener("pointerup", function(event) {
-  event.preventDefault();
-
-  if (!pointerStart || pointerStart.id !== event.pointerId) return;
-
-  const bounds = canvas.elt.getBoundingClientRect();
-  const tapX = (event.clientX - bounds.left) * width / bounds.width;
-  const tapY = (event.clientY - bounds.top) * height / bounds.height;
-
-  const movement = Math.hypot(
-    tapX - pointerStart.x,
-    tapY - pointerStart.y
-  );
-
-  pointerStart = null;
-
- // Swiping changes effects on distraction channels only.
-if (movement > TAP_MOVE_LIMIT) {
-  lastTap = null;
-
-  if (started && channels[channel].type === "distraction") {
-    effectIndex = (effectIndex + 1) % effectNames.length;
-    console.log("Effect:", effectNames[effectIndex]);
-  }
-
-  return;
-}
-  
-
-  // Change role remains a single tap.
-  if (
-    role !== null &&
-    started &&
-    tapX >= width - 120 &&
-    tapY >= 0 &&
-    tapY < 50
-  ) {
+  canvas.elt.addEventListener("pointercancel", function() {
+    pointerStart = null;
     lastTap = null;
-    resetRole();
-    return;
-  }
+  });
 
-  // Choosing a role remains a single tap.
-  if (role === null) {
-    if (tapX < width / 3) {
-      role = "left";
-    } else if (tapX < width * 2 / 3) {
-      role = "centre";
-    } else {
-      role = "right";
+  canvas.elt.addEventListener("pointerup", function(event) {
+    event.preventDefault();
+
+    if (!pointerStart || pointerStart.id !== event.pointerId) {
+      return;
     }
 
-    lastTap = null;
-    return;
-  }
+    const bounds = canvas.elt.getBoundingClientRect();
 
-  // Starting playback remains a single tap.
-  if (!started) {
-    lastTap = null;
-    changeChannel();
-    return;
-  }
+    const tapX =
+      (event.clientX - bounds.left) * width / bounds.width;
 
-  // Once playing, require two nearby taps.
-  const now = performance.now();
+    const tapY =
+      (event.clientY - bounds.top) * height / bounds.height;
 
-  if (
-    lastTap &&
-    now - lastTap.time <= DOUBLE_TAP_MS &&
-    Math.hypot(tapX - lastTap.x, tapY - lastTap.y) <= TAP_MOVE_LIMIT
-  ) {
-    lastTap = null;
-    changeChannel();
-  } else {
-    lastTap = { time: now, x: tapX, y: tapY };
-  }
-});
+    const movement = Math.hypot(
+      tapX - pointerStart.x,
+      tapY - pointerStart.y
+    );
+
+    pointerStart = null;
+
+    // Any-direction swipes change distraction effects.
+    if (movement > TAP_MOVE_LIMIT) {
+      lastTap = null;
+
+      if (started && channels[channel].type === "distraction") {
+        effectIndex = (effectIndex + 1) % effectNames.length;
+        console.log("Effect:", effectNames[effectIndex]);
+      }
+
+      return;
+    }
+
+    // Change role remains a single tap.
+    if (
+      role !== null &&
+      started &&
+      tapX >= width - 120 &&
+      tapY >= 0 &&
+      tapY < 50
+    ) {
+      lastTap = null;
+      resetRole();
+      return;
+    }
+
+    // Choosing a role remains a single tap.
+    if (role === null) {
+      if (tapX < width / 3) {
+        role = "left";
+      } else if (tapX < width * 2 / 3) {
+        role = "centre";
+      } else {
+        role = "right";
+      }
+
+      lastTap = null;
+      return;
+    }
+
+    // Starting playback remains a single tap.
+    if (!started) {
+      lastTap = null;
+      changeChannel();
+      return;
+    }
+
+    // Once playing, require two nearby taps.
+    const now = performance.now();
+
+    if (
+      lastTap &&
+      now - lastTap.time <= DOUBLE_TAP_MS &&
+      Math.hypot(
+        tapX - lastTap.x,
+        tapY - lastTap.y
+      ) <= TAP_MOVE_LIMIT
+    ) {
+      lastTap = null;
+      changeChannel();
+    } else {
+      lastTap = {
+        time: now,
+        x: tapX,
+        y: tapY
+      };
+    }
+  });
 }
 
 function buildChannelList() {
@@ -184,13 +210,10 @@ function buildChannelList() {
   for (let group = 0; group < 5; group++) {
     for (let slot = 1; slot <= 6; slot++) {
       let distractionNumber = group * 6 + slot;
-      let number = String(distractionNumber).padStart(2, "0");
 
       channels.push({
         type: "distraction",
         file: "distraction (" + distractionNumber + ").mp4",
-
-        // Alternate existing clips during testing.
         placeholder:
           distractionNumber % 2 === 1
             ? "channel1.mp4"
@@ -243,22 +266,13 @@ function draw() {
     return;
   }
 
-   // Draw only when a video frame is available.
+  // Draw only when a video frame is available.
   if (
     !loading &&
     !playbackError &&
     player.elt.readyState >= 2
   ) {
-    image(player, 0, 0, width, height);
-
-    // Effects apply to distraction videos only.
-    if (channels[channel].type === "distraction") {
-      if (effectIndex === 1) {
-        filter(INVERT);
-      } else if (effectIndex === 2) {
-        filter(POSTERIZE, 3);
-      }
-    }
+    drawVideoWithEffect();
   } else {
     fill(255);
     textAlign(CENTER, CENTER);
@@ -272,6 +286,8 @@ function draw() {
       100
     );
   }
+
+  // Channel label.
   fill(0, 160);
   rect(0, 0, width, 50);
 
@@ -293,15 +309,73 @@ function draw() {
   textSize(16);
   text("Change role", width - 60, 25);
 
-  // Draw the low-opacity flash over the whole canvas.
   drawVisualFeedback();
+}
+
+function drawVideoWithEffect() {
+  // Puzzle videos always remain normal.
+  const effect =
+    channels[channel].type === "distraction"
+      ? effectNames[effectIndex]
+      : "normal";
+
+  if (effect === "pixelation") {
+    pixelBuffer.image(
+      player,
+      0,
+      0,
+      pixelBuffer.width,
+      pixelBuffer.height
+    );
+
+    // Enlarge without smoothing the pixel blocks.
+    drawingContext.save();
+    drawingContext.imageSmoothingEnabled = false;
+    image(pixelBuffer, 0, 0, width, height);
+    drawingContext.restore();
+
+    return;
+  }
+
+  if (effect === "rgb-split") {
+    const offset = 8;
+
+    push();
+    blendMode(BLEND);
+    background(0);
+
+    // Combine three shifted colour components.
+    blendMode(ADD);
+
+    tint(255, 0, 0);
+    image(player, -offset, 0, width, height);
+
+    tint(0, 255, 0);
+    image(player, 0, 0, width, height);
+
+    tint(0, 0, 255);
+    image(player, offset, 0, width, height);
+
+    pop();
+    return;
+  }
+
+  image(player, 0, 0, width, height);
+
+  if (effect === "invert") {
+    filter(INVERT);
+  } else if (effect === "posterize") {
+    filter(POSTERIZE, 3);
+  } else if (effect === "threshold") {
+    filter(THRESHOLD, 0.5);
+  }
 }
 
 function changeChannel() {
   if (!started) {
     started = true;
 
-    // Request fullscreen directly from the user's start tap.
+    // Request fullscreen directly from the start tap.
     if (
       !document.fullscreenElement &&
       document.documentElement.requestFullscreen
@@ -334,7 +408,9 @@ function getChannelFile(entry) {
 }
 
 function playCurrentChannel() {
-    effectIndex = 0;
+  // Reset effects whenever the channel changes.
+  effectIndex = 0;
+
   let entry = channels[channel];
 
   startVisualFeedback(
@@ -344,14 +420,14 @@ function playCurrentChannel() {
   let filename = getChannelFile(entry);
   let video = player.elt;
 
-  // Ignore results from playback requests we have moved past.
+  // Ignore results from older playback requests.
   let request = ++playRequest;
 
   video.pause();
   playbackError = "";
   loading = true;
 
-  // Stop previous vibration, then play this puzzle's pattern.
+  // Stop previous vibration, then play the puzzle pattern.
   if (navigator.vibrate) {
     navigator.vibrate(0);
 
@@ -365,7 +441,6 @@ function playCurrentChannel() {
     video.src = filename;
     video.load();
   } else if (video.readyState >= 1) {
-    // Restart when entries reuse the same placeholder.
     video.currentTime = 0;
   }
 
@@ -390,13 +465,13 @@ function playCurrentChannel() {
       if (request !== playRequest) return;
 
       loading = false;
-      playbackError = "Playback failed. Tap to continue.";
+      playbackError = "Playback failed. Double-tap to continue.";
       console.error("PLAY FAILED:", filename, error);
     });
 }
 
 function resetRole() {
-  // Invalidate any unfinished playback request.
+  // Invalidate unfinished playback requests.
   playRequest++;
 
   feedbackPattern = [];
@@ -405,6 +480,10 @@ function resetRole() {
   if (navigator.vibrate) {
     navigator.vibrate(0);
   }
+
+  pointerStart = null;
+  lastTap = null;
+  effectIndex = 0;
 
   role = null;
   started = false;
@@ -425,7 +504,7 @@ function drawVisualFeedback() {
   let segmentEnd = 0;
 
   for (let i = 0; i < feedbackPattern.length; i++) {
-   segmentEnd += feedbackPattern[i] * 2;
+    segmentEnd += feedbackPattern[i] * 2;
 
     if (elapsed < segmentEnd) {
       // Even segments are flashes; odd segments are pauses.
