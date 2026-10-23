@@ -25,6 +25,12 @@ let channel = 0;
 let role = null;
 let started = false;
 
+const DOUBLE_TAP_MS = 300;
+const TAP_MOVE_LIMIT = 25;
+
+let pointerStart = null;
+let lastTap = null;
+
 let player;
 let activeFile = "";
 let loading = false;
@@ -68,44 +74,97 @@ function setup() {
     console.error("VIDEO LOAD FAILED:", activeFile);
   });
 
-  canvas.elt.addEventListener("pointerup", function(event) {
-    event.preventDefault();
+canvas.elt.addEventListener("pointerdown", function(event) {
+  if (!event.isPrimary || event.button !== 0) return;
 
-    let bounds = canvas.elt.getBoundingClientRect();
+  event.preventDefault();
 
-    let tapX =
-      (event.clientX - bounds.left) * width / bounds.width;
+  const bounds = canvas.elt.getBoundingClientRect();
 
-    let tapY =
-      (event.clientY - bounds.top) * height / bounds.height;
+  pointerStart = {
+    id: event.pointerId,
+    x: (event.clientX - bounds.left) * width / bounds.width,
+    y: (event.clientY - bounds.top) * height / bounds.height
+  };
 
-    // Change role button.
-    if (
-      role !== null &&
-      started &&
-      tapX >= width - 120 &&
-      tapY >= 0 &&
-      tapY < 50
-    ) {
-      resetRole();
-      return;
+  canvas.elt.setPointerCapture(event.pointerId);
+});
+
+canvas.elt.addEventListener("pointercancel", function() {
+  pointerStart = null;
+  lastTap = null;
+});
+
+canvas.elt.addEventListener("pointerup", function(event) {
+  event.preventDefault();
+
+  if (!pointerStart || pointerStart.id !== event.pointerId) return;
+
+  const bounds = canvas.elt.getBoundingClientRect();
+  const tapX = (event.clientX - bounds.left) * width / bounds.width;
+  const tapY = (event.clientY - bounds.top) * height / bounds.height;
+
+  const movement = Math.hypot(
+    tapX - pointerStart.x,
+    tapY - pointerStart.y
+  );
+
+  pointerStart = null;
+
+  // Ignore swipes for now. We will add their effects next.
+  if (movement > TAP_MOVE_LIMIT) {
+    lastTap = null;
+    return;
+  }
+
+  // Change role remains a single tap.
+  if (
+    role !== null &&
+    started &&
+    tapX >= width - 120 &&
+    tapY >= 0 &&
+    tapY < 50
+  ) {
+    lastTap = null;
+    resetRole();
+    return;
+  }
+
+  // Choosing a role remains a single tap.
+  if (role === null) {
+    if (tapX < width / 3) {
+      role = "left";
+    } else if (tapX < width * 2 / 3) {
+      role = "centre";
+    } else {
+      role = "right";
     }
 
-    // Choose one of the three roles.
-    if (role === null) {
-      if (tapX < width / 3) {
-        role = "left";
-      } else if (tapX < width * 2 / 3) {
-        role = "centre";
-      } else {
-        role = "right";
-      }
+    lastTap = null;
+    return;
+  }
 
-      return;
-    }
-
+  // Starting playback remains a single tap.
+  if (!started) {
+    lastTap = null;
     changeChannel();
-  });
+    return;
+  }
+
+  // Once playing, require two nearby taps.
+  const now = performance.now();
+
+  if (
+    lastTap &&
+    now - lastTap.time <= DOUBLE_TAP_MS &&
+    Math.hypot(tapX - lastTap.x, tapY - lastTap.y) <= TAP_MOVE_LIMIT
+  ) {
+    lastTap = null;
+    changeChannel();
+  } else {
+    lastTap = { time: now, x: tapX, y: tapY };
+  }
+});
 }
 
 function buildChannelList() {
