@@ -243,23 +243,22 @@ function draw() {
     return;
   }
 
-  // Draw only when a video frame is available.
+   // Draw only when a video frame is available.
   if (
     !loading &&
     !playbackError &&
     player.elt.readyState >= 2
   ) {
-image(player, 0, 0, width, height);
+    image(player, 0, 0, width, height);
 
-// Apply the effect before drawing labels and feedback.
-if (channels[channel].type === "distraction") {
-  if (effectIndex === 1) {
-    filter(INVERT);
- } else if (effectIndex === 2) {
-  filter(POSTERIZE, 3);
-}
-  }
-}
+    // Effects apply to distraction videos only.
+    if (channels[channel].type === "distraction") {
+      if (effectIndex === 1) {
+        filter(INVERT);
+      } else if (effectIndex === 2) {
+        filter(POSTERIZE, 3);
+      }
+    }
   } else {
     fill(255);
     textAlign(CENTER, CENTER);
@@ -273,8 +272,6 @@ if (channels[channel].type === "distraction") {
       100
     );
   }
-
-  // Channel label.
   fill(0, 160);
   rect(0, 0, width, 50);
 
