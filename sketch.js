@@ -27,6 +27,10 @@ let started = false;
 
 const DOUBLE_TAP_MS = 300;
 const TAP_MOVE_LIMIT = 25;
+const DISTRACTION_PLAYS = 1;
+const PUZZLE_PLAYS = 2;
+
+let completedPlays = 0;
 
 let pointerStart = null;
 let lastTap = null;
@@ -81,6 +85,36 @@ function setup() {
     loading = false;
     playbackError = "";
   });
+video.addEventListener("ended", function() {
+  if (!started || !video.ended) return;
+
+  completedPlays++;
+
+  const playLimit =
+    channels[channel].type === "puzzle"
+      ? PUZZLE_PLAYS
+      : DISTRACTION_PLAYS;
+
+  console.log("Completed plays:", completedPlays, "/", playLimit);
+
+  if (completedPlays >= playLimit) {
+    lastTap = null;
+    changeChannel();
+    return;
+  }
+
+  // Replay without resetting the completed-play count.
+  const request = playRequest;
+  video.currentTime = 0;
+
+  video.play().catch(function(error) {
+    if (request !== playRequest) return;
+
+    loading = false;
+    playbackError = "Playback failed. Double-tap to continue.";
+    console.error("REPLAY FAILED:", error);
+  });
+});
 
   video.addEventListener("error", function() {
     if (!started) return;
@@ -408,8 +442,9 @@ function getChannelFile(entry) {
 }
 
 function playCurrentChannel() {
-  // Reset effects whenever the channel changes.
+  // Reset effects and play count whenever the channel changes.
   effectIndex = 0;
+  completedPlays = 0;
 
   let entry = channels[channel];
 
@@ -444,7 +479,7 @@ function playCurrentChannel() {
     video.currentTime = 0;
   }
 
-  video.loop = true;
+  video.loop = false;
 
   console.log(
     "Channel:",
