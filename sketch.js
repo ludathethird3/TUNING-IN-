@@ -281,7 +281,7 @@ if (channels[channel].type === "distraction") {
   textAlign(LEFT, CENTER);
   textSize(16);
   text(
-    role + " | " + (channel + 1) + "/" + channels.length,
+    role + " | " + (channel + 1) + " | " + effectNames[effectIndex],
     15,
     25
   );
