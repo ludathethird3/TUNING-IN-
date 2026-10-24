@@ -239,11 +239,11 @@ video.addEventListener("ended", function() {
 function buildChannelList() {
   channels = [];
 
-  // Six distractions followed by one puzzle.
-  // Five groups = 30 distractions + 5 puzzles.
-  for (let group = 0; group < 5; group++) {
-    for (let slot = 1; slot <= 6; slot++) {
-      let distractionNumber = group * 6 + slot;
+// Seven distractions followed by one puzzle.
+// Five groups = 35 distractions + 5 puzzles.
+for (let group = 0; group < 5; group++) {
+  for (let slot = 1; slot <= 7; slot++) {
+    let distractionNumber = group * 7 + slot;
 
       channels.push({
         type: "distraction",
