@@ -111,7 +111,7 @@ video.addEventListener("ended", function() {
     if (request !== playRequest) return;
 
     loading = false;
-    playbackError = "Playback failed. Double-tap to continue.";
+    playbackError = "Playback failed. Swipe Up to Continue.";
     console.error("REPLAY FAILED:", error);
   });
 });
@@ -120,7 +120,7 @@ video.addEventListener("ended", function() {
     if (!started) return;
 
     loading = false;
-    playbackError = "Could not load video. Double-tap to continue.";
+    playbackError = "Could not load video. Swipe Up to Continue.";
     console.error("VIDEO LOAD FAILED:", activeFile);
   });
 
@@ -144,96 +144,83 @@ video.addEventListener("ended", function() {
     pointerStart = null;
     lastTap = null;
   });
+canvas.elt.addEventListener("pointerup", function(event) {
+  event.preventDefault();
 
-  canvas.elt.addEventListener("pointerup", function(event) {
-    event.preventDefault();
+  if (!pointerStart || pointerStart.id !== event.pointerId) {
+    return;
+  }
 
-    if (!pointerStart || pointerStart.id !== event.pointerId) {
-      return;
-    }
+  const bounds = canvas.elt.getBoundingClientRect();
 
-    const bounds = canvas.elt.getBoundingClientRect();
+  const tapX =
+    (event.clientX - bounds.left) * width / bounds.width;
+  const tapY =
+    (event.clientY - bounds.top) * height / bounds.height;
 
-    const tapX =
-      (event.clientX - bounds.left) * width / bounds.width;
+  const deltaX = tapX - pointerStart.x;
+  const deltaY = tapY - pointerStart.y;
+  const movement = Math.hypot(deltaX, deltaY);
 
-    const tapY =
-      (event.clientY - bounds.top) * height / bounds.height;
+  pointerStart = null;
 
-    const movement = Math.hypot(
-      tapX - pointerStart.x,
-      tapY - pointerStart.y
-    );
+  // Handle swipes.
+  if (movement > TAP_MOVE_LIMIT) {
+    if (!started) return;
 
-    pointerStart = null;
-
-    // Any-direction swipes change distraction effects.
-    if (movement > TAP_MOVE_LIMIT) {
-      lastTap = null;
-
-      if (started && channels[channel].type === "distraction") {
-        effectIndex = (effectIndex + 1) % effectNames.length;
-        console.log("Effect:", effectNames[effectIndex]);
-      }
-
-      return;
-    }
-
-    // Change role remains a single tap.
+    // Swipe up: change video on any channel.
     if (
-      role !== null &&
-      started &&
-      tapX >= width - 120 &&
-      tapY >= 0 &&
-      tapY < 50
+      deltaY < -TAP_MOVE_LIMIT &&
+      Math.abs(deltaY) > Math.abs(deltaX)
     ) {
-      lastTap = null;
-      resetRole();
-      return;
-    }
-
-    // Choosing a role remains a single tap.
-    if (role === null) {
-      if (tapX < width / 3) {
-        role = "left";
-      } else if (tapX < width * 2 / 3) {
-        role = "centre";
-      } else {
-        role = "right";
-      }
-
-      lastTap = null;
-      return;
-    }
-
-    // Starting playback remains a single tap.
-    if (!started) {
-      lastTap = null;
       changeChannel();
       return;
     }
 
-    // Once playing, require two nearby taps.
-    const now = performance.now();
-
+    // Swipe left or right: cycle distraction effects.
     if (
-      lastTap &&
-      now - lastTap.time <= DOUBLE_TAP_MS &&
-      Math.hypot(
-        tapX - lastTap.x,
-        tapY - lastTap.y
-      ) <= TAP_MOVE_LIMIT
+      Math.abs(deltaX) > TAP_MOVE_LIMIT &&
+      Math.abs(deltaX) > Math.abs(deltaY) &&
+      channels[channel].type === "distraction"
     ) {
-      lastTap = null;
-      changeChannel();
+      effectIndex = (effectIndex + 1) % effectNames.length;
+      console.log("Effect:", effectNames[effectIndex]);
+    }
+
+    return;
+  }
+
+  // Single tap: change role.
+  if (
+    role !== null &&
+    started &&
+    tapX >= width - 120 &&
+    tapY >= 0 &&
+    tapY < 50
+  ) {
+    resetRole();
+    return;
+  }
+
+  // Single tap: select a role.
+  if (role === null) {
+    if (tapX < width / 3) {
+      role = "left";
+    } else if (tapX < width * 2 / 3) {
+      role = "centre";
     } else {
-      lastTap = {
-        time: now,
-        x: tapX,
-        y: tapY
-      };
+      role = "right";
     }
-  });
+
+    return;
+  }
+
+  // Single tap: start playback.
+  if (!started) {
+    changeChannel();
+  }
+});
+ 
 }
 
 function buildChannelList() {
@@ -500,7 +487,7 @@ function playCurrentChannel() {
       if (request !== playRequest) return;
 
       loading = false;
-      playbackError = "Playback failed. Double-tap to continue.";
+      playbackError = "Playback failed. Swipe Up to Continue.";
       console.error("PLAY FAILED:", filename, error);
     });
 }
