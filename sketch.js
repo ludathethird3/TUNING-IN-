@@ -308,28 +308,7 @@ function draw() {
     );
   }
 
-  // Channel label.
-  fill(0, 160);
-  rect(0, 0, width, 50);
-
-  fill(255);
-  textAlign(LEFT, CENTER);
-  textSize(16);
-  text(
-    role + " | " + (channel + 1) + " | " + effectNames[effectIndex],
-    15,
-    25
-  );
-
-  // Change role button.
-  fill(60);
-  rect(width - 120, 0, 120, 50);
-
-  fill(255);
-  textAlign(CENTER, CENTER);
-  textSize(16);
-  text("Change role", width - 60, 25);
-
+  
   drawVisualFeedback();
 }
 
