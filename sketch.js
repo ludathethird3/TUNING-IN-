@@ -308,7 +308,11 @@ function draw() {
     );
   }
 
-  
+  // Change role — text only, no background.
+fill(255);
+textAlign(CENTER, CENTER);
+textSize(16);
+text("Change role", width - 60, 25);
   drawVisualFeedback();
 }
 
