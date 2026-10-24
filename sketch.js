@@ -2,7 +2,7 @@
 const USE_PLACEHOLDERS = false;
 
 // Full-screen flash opacity: 0–255.
-const FLASH_OPACITY = 135;
+const FLASH_OPACITY = 255;
 
 const roles = ["left", "centre", "right"];
 
@@ -13,11 +13,11 @@ const placeholderFiles = {
 };
 
 const puzzlePatterns = [
-  [200],
-  [100, 100, 100],
-  [100, 100, 100, 100, 100],
-  [100, 100, 300],
-  [300, 100, 100]
+  [400],
+  [200, 200, 200],
+  [200, 200, 200, 200, 200],
+  [200, 100, 500],
+  [500, 100, 100]
 ];
 
 let channels = [];
