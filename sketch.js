@@ -124,32 +124,7 @@ video.addEventListener("ended", function() {
     console.error("VIDEO LOAD FAILED:", activeFile);
   });
 
-  canvas.elt.addEventListener("pointerdown", function(event) {
-    if (!event.isPrimary || event.button !== 0) return;
-
-    event.preventDefault();
-
-    const bounds = canvas.elt.getBoundingClientRect();
-
-    pointerStart = {
-      id: event.pointerId,
-      x: (event.clientX - bounds.left) * width / bounds.width,
-      y: (event.clientY - bounds.top) * height / bounds.height
-    };
-
-    canvas.elt.setPointerCapture(event.pointerId);
-  });
-
-  canvas.elt.addEventListener("pointercancel", function() {
-    pointerStart = null;
-    lastTap = null;
-  });
-canvas.elt.addEventListener("pointerup", function(event) {
-  event.preventDefault();
-
-  if (!pointerStart || pointerStart.id !== event.pointerId) {
-    return;
-  }
+  const bounds = canvas.elt.getBoundingClientRect();
 
   const bounds = canvas.elt.getBoundingClientRect();
 
