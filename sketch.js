@@ -264,36 +264,39 @@ function draw() {
   noStroke();
 
   // First screen: choose a role.
-  if (role === null) {
+   if (role === null) {
     fill(255);
     textAlign(CENTER, CENTER);
+
+    textFont("sans-serif");
+    textStyle(NORMAL);
     textSize(24);
     text("Choose your position", width / 2, height / 3);
-textSize(15);
-text(
-  "Swipe up to change channels.\nSwipe left or right to change effects.",
-  20,
-  height / 3 + 35,
-  width - 40,
-  70
-);
 
     textSize(18);
     text("LEFT", width / 6, height / 2);
     text("CENTRE", width / 2, height / 2);
     text("RIGHT", width * 5 / 6, height / 2);
 
+    textFont("Georgia");
+    textStyle(ITALIC);
+    textSize(16);
+    fill(200);
+
+    text(
+      "Swipe up to change channels.\nSwipe left or right to change effects.",
+      20,
+      height / 2 + 45,
+      width - 40,
+      90
+    );
+
+    // Restore the default style for subsequent screens.
+    textFont("sans-serif");
+    textStyle(NORMAL);
+
     return;
   }
-
-  // Second screen: tap to start.
-  if (!started) {
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(24);
-    text("Tap to start", width / 2, height / 2);
-
-    return;
   }
 
   // Draw only when a video frame is available.
