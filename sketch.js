@@ -297,7 +297,17 @@ function draw() {
 
     return;
   }
+
+  // Second screen: tap to start.
+  if (!started) {
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(24);
+    text("Tap to start", width / 2, height / 2);
+
+    return;
   }
+
 
   // Draw only when a video frame is available.
   if (
