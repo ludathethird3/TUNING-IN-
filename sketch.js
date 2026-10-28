@@ -124,11 +124,37 @@ video.addEventListener("ended", function() {
     console.error("VIDEO LOAD FAILED:", activeFile);
   });
 
-  const bounds = canvas.elt.getBoundingClientRect();
+  canvas.elt.addEventListener("pointerdown", function(event) {
+    if (!event.isPrimary || event.button !== 0) return;
 
-  const bounds = canvas.elt.getBoundingClientRect();
+    event.preventDefault();
 
-  const tapX =
+    const bounds = canvas.elt.getBoundingClientRect();
+
+    pointerStart = {
+      id: event.pointerId,
+      x: (event.clientX - bounds.left) * width / bounds.width,
+      y: (event.clientY - bounds.top) * height / bounds.height
+    };
+
+    canvas.elt.setPointerCapture(event.pointerId);
+  });
+
+  canvas.elt.addEventListener("pointercancel", function() {
+    pointerStart = null;
+    lastTap = null;
+  });
+
+  canvas.elt.addEventListener("pointerup", function(event) {
+    event.preventDefault();
+
+    if (!pointerStart || pointerStart.id !== event.pointerId) {
+      return;
+    }
+
+    const bounds = canvas.elt.getBoundingClientRect();
+
+    const tapX =
     (event.clientX - bounds.left) * width / bounds.width;
   const tapY =
     (event.clientY - bounds.top) * height / bounds.height;
