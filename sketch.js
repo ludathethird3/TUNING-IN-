@@ -269,6 +269,14 @@ function draw() {
     textAlign(CENTER, CENTER);
     textSize(24);
     text("Choose your position", width / 2, height / 3);
+textSize(15);
+text(
+  "Swipe up to change channels.\nSwipe left or right to change effects.",
+  20,
+  height / 3 + 35,
+  width - 40,
+  70
+);
 
     textSize(18);
     text("LEFT", width / 6, height / 2);
